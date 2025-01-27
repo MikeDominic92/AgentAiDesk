@@ -1,0 +1,42 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: help-desk-agent
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/maxScale: "10"
+    spec:
+      serviceAccountName: agentaidesk-app@agentaidesk-2025.iam.gserviceaccount.com
+      containers:
+      - image: us-central1-docker.pkg.dev/agentaidesk-2025/help-desk-repo/help-desk-agent
+        ports:
+        - containerPort: 8080
+        env:
+        - name: GCP_PROJECT_ID
+          value: "agentaidesk-2025"
+        - name: STORAGE_BUCKET
+          value: "agentaidesk-storage-2025"
+        - name: DEEPSEEK_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: deepseek-api-key
+              key: latest
+        - name: API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: api-key
+              key: latest
+        resources:
+          limits:
+            memory: 1Gi
+            cpu: "1"
+        volumeMounts:
+        - name: service-account
+          mountPath: /secrets
+          readOnly: true
+      volumes:
+      - name: service-account
+        secret:
+          secretName: service-account-key

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>IT Help Desk Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto p-4 max-w-4xl">
+        <h1 class="text-2xl font-bold mb-4 text-center text-gray-800">IT Help Desk Assistant</h1>
+        
+        <div class="grid grid-cols-3 gap-4">
+            <!-- Chat container -->
+            <div class="col-span-2">
+                <div class="bg-white rounded-lg shadow-lg p-4 mb-4">
+                    <div id="chatHistory" class="space-y-4 mb-4 h-[500px] overflow-y-auto">
+                        <!-- Chat messages will be added here -->
+                    </div>
+                    
+                    <!-- Input area -->
+                    <div class="flex space-x-2">
+                        <input type="text" id="userInput" 
+                            class="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            placeholder="Type your IT support question here..."
+                            onkeypress="if(event.key === 'Enter') sendMessage()">
+                        <button onclick="sendMessage()" 
+                            class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                            Send
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Common issues shortcuts -->
+                <div class="bg-white rounded-lg shadow-lg p-4">
+                    <h2 class="text-lg font-semibold mb-2 text-gray-700">Common Issues</h2>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="askCommonQuestion('How do I reset my password?')" 
+                            class="text-left p-2 text-sm bg-gray-50 hover:bg-gray-100 rounded">
+                            🔑 Password Reset
+                        </button>
+                        <button onclick="askCommonQuestion('My computer is running slow, what should I do?')" 
+                            class="text-left p-2 text-sm bg-gray-50 hover:bg-gray-100 rounded">
+                            🐌 Slow Computer
+                        </button>
+                        <button onclick="askCommonQuestion('How do I connect to the VPN?')" 
+                            class="text-left p-2 text-sm bg-gray-50 hover:bg-gray-100 rounded">
+                            🔒 VPN Connection
+                        </button>
+                        <button onclick="askCommonQuestion('I cannot access my email')" 
+                            class="text-left p-2 text-sm bg-gray-50 hover:bg-gray-100 rounded">
+                            📧 Email Issues
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Knowledge Base Articles -->
+            <div class="col-span-1">
+                <div class="bg-white rounded-lg shadow-lg p-4">
+                    <h2 class="text-lg font-semibold mb-2 text-gray-700">Related Articles</h2>
+                    <div id="kbArticles" class="space-y-4">
+                        <!-- Knowledge base articles will be added here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isWaitingForResponse = false;
+
+        function createMessageElement(content, isUser) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `flex ${isUser ? 'justify-end' : 'justify-start'}`;
+            
+            const bubble = document.createElement('div');
+            bubble.className = `max-w-[70%] p-3 rounded-lg ${isUser ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-800'}`;
+            bubble.textContent = content;
+            
+            messageDiv.appendChild(bubble);
+            return messageDiv;
+        }
+
+        function addMessage(content, isUser) {
+            const chatHistory = document.getElementById('chatHistory');
+            chatHistory.appendChild(createMessageElement(content, isUser));
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        function displayKnowledgeBaseArticles(articles) {
+            const kbArticles = document.getElementById('kbArticles');
+            kbArticles.innerHTML = ''; // Clear existing articles
+            
+            if (!articles || articles.length === 0) {
+                kbArticles.innerHTML = '<p class="text-gray-500">No relevant articles found</p>';
+                return;
+            }
+            
+            articles.forEach(article => {
+                const articleDiv = document.createElement('div');
+                articleDiv.className = 'bg-gray-50 p-3 rounded-lg';
+                articleDiv.innerHTML = `
+                    <h3 class="font-semibold text-gray-700">${article.title}</h3>
+                    <p class="text-sm text-gray-600 mt-1">${article.content.substring(0, 150)}...</p>
+                    <div class="flex flex-wrap gap-1 mt-2">
+                        ${article.tags.map(tag => `
+                            <span class="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded">
+                                ${tag}
+                            </span>
+                        `).join('')}
+                    </div>
+                `;
+                kbArticles.appendChild(articleDiv);
+            });
+        }
+
+        async function sendMessage() {
+            if (isWaitingForResponse) return;
+
+            const input = document.getElementById('userInput');
+            const message = input.value.trim();
+            if (!message) return;
+
+            input.value = '';
+            addMessage(message, true);
+            isWaitingForResponse = true;
+
+            try {
+                const response = await fetch('https://help-desk-agent-7oahwzkcoa-uc.a.run.app/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': 'your-api-key-here'
+                    },
+                    body: JSON.stringify({ 
+                        message,
+                        language: 'en'  // You can make this configurable
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                addMessage(data.response, false);
+                displayKnowledgeBaseArticles(data.knowledge_base_articles);
+            } catch (error) {
+                addMessage('Sorry, there was an error processing your request. Please try again.', false);
+                console.error('Error:', error);
+            }
+
+            isWaitingForResponse = false;
+        }
+
+        function askCommonQuestion(question) {
+            document.getElementById('userInput').value = question;
+            sendMessage();
+        }
+
+        // Add welcome message
+        window.onload = () => {
+            addMessage("Hello! I'm your IT Support Assistant. How can I help you today?", false);
+            displayKnowledgeBaseArticles([]); // Initialize empty articles panel
+        };
+    </script>
+</body>
+</html>

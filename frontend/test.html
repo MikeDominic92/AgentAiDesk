@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentAiDesk - Test Questions</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .loading {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-8">AgentAiDesk Test Questions</h1>
+        
+        <div class="space-y-6">
+            <!-- Test Questions -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4">Cloud Computing</h2>
+                <button onclick="askQuestion(this, 'How do I optimize costs for my AWS EC2 instances?')" 
+                        class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                    Ask about AWS cost optimization
+                </button>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4">Security</h2>
+                <button onclick="askQuestion(this, 'What steps should I take after detecting a potential security breach?')"
+                        class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                    Ask about security breach response
+                </button>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4">Database</h2>
+                <button onclick="askQuestion(this, 'Our MySQL database is running slow. How can we improve its performance?')"
+                        class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                    Ask about MySQL optimization
+                </button>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4">System Administration</h2>
+                <button onclick="askQuestion(this, 'How do I troubleshoot high CPU usage on a Linux server?')"
+                        class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                    Ask about Linux CPU troubleshooting
+                </button>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4">DevOps</h2>
+                <button onclick="askQuestion(this, 'Explain how to set up monitoring for a Kubernetes cluster')"
+                        class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                    Ask about Kubernetes monitoring
+                </button>
+            </div>
+        </div>
+
+        <!-- Response Display -->
+        <div class="mt-8 bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-semibold mb-4">Response</h2>
+            <div id="questionDisplay" class="mb-4 text-gray-600"></div>
+            <div id="responseDisplay" class="whitespace-pre-wrap"></div>
+        </div>
+    </div>
+
+    <script>
+        async function askQuestion(button, question) {
+            // Disable button and show loading state
+            button.classList.add('loading');
+            document.getElementById('questionDisplay').textContent = 'Question: ' + question;
+            document.getElementById('responseDisplay').textContent = 'Loading response...';
+
+            try {
+                const response = await fetch('http://localhost:8000/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ message: question })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                document.getElementById('responseDisplay').textContent = data.response;
+            } catch (error) {
+                document.getElementById('responseDisplay').textContent = 'Error: ' + error.message;
+                console.error('Error:', error);
+            } finally {
+                // Re-enable button
+                button.classList.remove('loading');
+            }
+        }
+    </script>
+</body>
+</html>
