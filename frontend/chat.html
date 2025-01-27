@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AgentAiDesk - Chat Interface</title>
+    <title>AgentAiDesk Chat</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -37,8 +36,8 @@
         }
     </style>
 </head>
-<body>
-    <div id="app" class="min-h-screen">
+<body class="bg-gray-100">
+    <div class="min-h-screen bg-gray-100">
         <!-- Navigation -->
         <nav class="bg-white shadow-sm">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -49,141 +48,114 @@
                         </div>
                     </div>
                     <div class="flex items-center">
-                        <a href="index.html" class="text-gray-600 hover:text-gray-900">Switch to Ticket System</a>
+                        <a href="/" class="text-gray-600 hover:text-gray-900">Back to Home</a>
                     </div>
                 </div>
             </div>
         </nav>
 
         <!-- Chat Interface -->
-        <div class="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
-            <div class="bg-white shadow sm:rounded-lg p-6 chat-container">
-                <!-- Messages -->
-                <div class="message-container overflow-y-auto mb-4 p-4 bg-gray-50 rounded-lg">
-                    <div v-for="(message, index) in messages" :key="index" class="mb-4">
-                        <!-- User Message -->
-                        <div v-if="message.type === 'user'" class="flex justify-end">
-                            <div class="message bg-indigo-600 text-white rounded-lg py-2 px-4">
-                                {{ message.content }}
-                            </div>
-                        </div>
-                        <!-- Agent Message -->
-                        <div v-else class="flex justify-start">
-                            <div class="message bg-gray-200 text-gray-800 rounded-lg py-2 px-4">
-                                <div class="font-medium text-indigo-600 mb-1">AgentAiDesk</div>
-                                <div class="whitespace-pre-wrap">{{ message.content }}</div>
-                            </div>
-                        </div>
+        <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+            <div class="bg-white shadow sm:rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <div id="chat-container" class="space-y-4 h-96 overflow-y-auto">
+                        <!-- Chat messages will be inserted here -->
                     </div>
-                    <!-- Typing Indicator -->
-                    <div v-if="isTyping" class="flex justify-start">
-                        <div class="message bg-gray-200 text-gray-800 rounded-lg py-2 px-4">
-                            <div class="font-medium text-indigo-600 mb-1">AgentAiDesk</div>
-                            <div class="typing-indicator">Thinking</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Input Area -->
-                <div class="border-t pt-4">
-                    <form @submit.prevent="sendMessage" class="flex space-x-4">
-                        <input 
-                            type="text" 
-                            v-model="newMessage" 
-                            placeholder="Ask me anything about IT support..."
-                            class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                            :disabled="isTyping"
-                        >
-                        <button 
-                            type="submit" 
-                            class="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                            :disabled="isTyping || !newMessage.trim()"
-                        >
+                    <div class="mt-5 flex">
+                        <input type="text" id="message-input" 
+                               class="flex-1 rounded-l-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                               placeholder="Type your message...">
+                        <button onclick="sendMessage()" 
+                                class="ml-3 inline-flex justify-center rounded-r-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
                             Send
                         </button>
-                    </form>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        const { createApp } = Vue
+        const API_KEY = 'sk-7c38538a7465446ba6a0bfe9da9d3565';
+        const chatContainer = document.getElementById('chat-container');
+        const messageInput = document.getElementById('message-input');
 
-        createApp({
-            data() {
-                return {
-                    messages: [
-                        {
-                            type: 'agent',
-                            content: 'Hello! I\'m your IT support assistant. How can I help you today?'
-                        }
-                    ],
-                    newMessage: '',
-                    isTyping: false
-                }
-            },
-            mounted() {
-                this.$nextTick(() => {
-                    this.scrollToBottom()
-                })
-            },
-            methods: {
-                async sendMessage() {
-                    if (!this.newMessage.trim() || this.isTyping) return
+        // Add initial greeting
+        addMessage("Hello! How can I help you today?", "assistant");
 
-                    // Add user message
-                    this.messages.push({
-                        type: 'user',
-                        content: this.newMessage
+        function addMessage(text, role) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = role === 'user' ? 
+                'flex justify-end' : 'flex justify-start';
+
+            const messageBubble = document.createElement('div');
+            messageBubble.className = role === 'user' ? 
+                'bg-indigo-600 text-white rounded-lg px-4 py-2 max-w-md' :
+                'bg-gray-200 text-gray-900 rounded-lg px-4 py-2 max-w-md';
+            
+            messageBubble.textContent = text;
+            messageDiv.appendChild(messageBubble);
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            // Clear input
+            messageInput.value = '';
+
+            // Add user message to chat
+            addMessage(message, 'user');
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        language: 'en'
                     })
-                    
-                    const message = this.newMessage
-                    this.newMessage = ''
-                    this.isTyping = true
-                    this.scrollToBottom()
+                });
 
-                    try {
-                        const response = await fetch('http://localhost:8000/chat', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                message: message
-                            })
-                        });
-                        
-                        if (!response.ok) {
-                            throw new Error('Network response was not ok');
-                        }
-                        
-                        const data = await response.json();
-                        
-                        // Add agent response
-                        this.messages.push({
-                            type: 'agent',
-                            content: data.response
-                        })
-                    } catch (error) {
-                        console.error('Error:', error);
-                        this.messages.push({
-                            type: 'agent',
-                            content: 'I apologize, but I encountered an error. Please try again.'
-                        })
-                    } finally {
-                        this.isTyping = false
-                        this.scrollToBottom()
-                    }
-                },
-                scrollToBottom() {
-                    this.$nextTick(() => {
-                        const container = document.querySelector('.message-container')
-                        container.scrollTop = container.scrollHeight
-                    })
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Failed to get response');
                 }
+
+                const data = await response.json();
+                
+                // Add assistant response to chat
+                addMessage(data.response, 'assistant');
+
+                // If there are knowledge base articles, display them
+                if (data.knowledge_base_articles && data.knowledge_base_articles.length > 0) {
+                    const articlesMessage = "Related articles:\n" + 
+                        data.knowledge_base_articles.map(article => 
+                            `- ${article.title}`
+                        ).join('\n');
+                    addMessage(articlesMessage, 'assistant');
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                const errorMessage = error.message.includes('unavailable') ? 
+                    'Sorry, our AI service is temporarily unavailable. Please try again later.' :
+                    `Error: ${error.message}. Please try again.`;
+                addMessage(errorMessage, 'assistant');
             }
-        }).mount('#app')
+        }
+
+        // Listen for Enter key
+        messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
     </script>
 </body>
 </html>

@@ -11,16 +11,18 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copy the frontend files
+COPY frontend /app/frontend
+
+# Copy the rest of the application
 COPY . .
 
 # Set environment variables
 ENV PORT=8080
 ENV HOST=0.0.0.0
-ENV PYTHONUNBUFFERED=1
 
-# Expose port
+# Expose the port
 EXPOSE 8080
 
 # Run the application
-CMD exec uvicorn agent:app --host ${HOST} --port ${PORT} --workers 1
+CMD ["uvicorn", "agent:app", "--host", "0.0.0.0", "--port", "8080"]

@@ -5,11 +5,14 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query, Header, Security
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security.api_key import APIKeyHeader, APIKey
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import BaseModel
 from gcp_knowledge_base import GCPKnowledgeBase, initialize_gcp_knowledge_base
 import logging
 from google.cloud import logging as cloud_logging
 from starlette.status import HTTP_403_FORBIDDEN
+import json
 
 # Load environment variables
 load_dotenv()
@@ -29,8 +32,8 @@ logging_client.setup_logging()
 logger = logging.getLogger(__name__)
 
 # API Key security
-API_KEY = os.getenv("API_KEY", "your-api-key-here")
-api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+API_KEY = os.getenv("API_KEY", "sk-7c38538a7465446ba6a0bfe9da9d3565")
+api_key_header = APIKeyHeader(name="Authorization", auto_error=False)
 
 # Configure CORS with specific origins
 app.add_middleware(
@@ -42,11 +45,28 @@ app.add_middleware(
 )
 
 async def get_api_key(api_key_header: str = Security(api_key_header)):
-    if api_key_header == API_KEY:
-        return api_key_header
-    raise HTTPException(
-        status_code=HTTP_403_FORBIDDEN, detail="Could not validate API key"
-    )
+    if not api_key_header:
+        raise HTTPException(
+            status_code=HTTP_403_FORBIDDEN, detail="API key is required"
+        )
+    # Extract token from 'Bearer <token>'
+    token = api_key_header.replace('Bearer ', '') if api_key_header.startswith('Bearer ') else api_key_header
+    if token != API_KEY:
+        raise HTTPException(
+            status_code=HTTP_403_FORBIDDEN, detail="Could not validate API key"
+        )
+    return token
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="frontend", html=True), name="static")
+
+@app.get("/")
+async def root():
+    return FileResponse("frontend/index.html")
+
+@app.get("/chat")
+async def chat():
+    return FileResponse("frontend/chat.html")
 
 class ChatMessage(BaseModel):
     message: str
@@ -65,8 +85,12 @@ async def chat_with_agent(
     Chat endpoint for direct communication with the AI agent
     """
     try:
+        # Log incoming message
+        logger.info(f"Received chat message: {chat_message.message}")
+        
         # First, search the knowledge base
         kb_results = await kb.search_articles(chat_message.message, chat_message.language)
+        logger.info(f"Found {len(kb_results)} relevant articles")
         
         # Prepare system message with knowledge base context
         system_message = "You are an expert IT support engineer. "
@@ -99,17 +123,24 @@ async def chat_with_agent(
                     "role": "user",
                     "content": chat_message.message
                 }
-            ]
+            ],
+            "temperature": 0.7,
+            "max_tokens": 1000
         }
 
-        logger.info("Sending request to DeepSeek API...")
-        response = requests.post(
-            "https://api.deepseek.com/v1/chat/completions",
-            headers=headers,
-            json=data,
-            timeout=60
-        )
-        
+        try:
+            logger.info("Sending request to DeepSeek API...")
+            response = requests.post(
+                "https://api.deepseek.com/v1/chat/completions",
+                headers=headers,
+                json=data,
+                timeout=60
+            )
+        except requests.exceptions.RequestException as e:
+            error_msg = "DeepSeek API is currently unavailable. Our service is experiencing temporary issues. Please try again later."
+            logger.error(f"DeepSeek API connection error: {str(e)}")
+            raise HTTPException(status_code=503, detail=error_msg)
+            
         logger.info(f"Response status: {response.status_code}")
         if response.status_code != 200:
             error_detail = f"DeepSeek API error: {response.text}"
@@ -117,17 +148,26 @@ async def chat_with_agent(
             raise HTTPException(status_code=response.status_code, detail=error_detail)
             
         response_data = response.json()
+        logger.info(f"DeepSeek API response: {json.dumps(response_data)}")
+        
         if "choices" not in response_data or not response_data["choices"]:
             logger.error("Invalid response format from DeepSeek API")
             raise HTTPException(status_code=500, detail="Invalid response format from DeepSeek API")
             
+        assistant_response = response_data["choices"][0]["message"]["content"]
+        logger.info(f"Generated response: {assistant_response}")
+        
         return {
-            "response": response_data["choices"][0]["message"]["content"],
+            "response": assistant_response,
             "knowledge_base_articles": kb_results[:2]  # Return top 2 relevant articles
         }
         
     except requests.exceptions.RequestException as e:
         error_msg = f"Request error: {str(e)}"
+        logger.error(error_msg)
+        raise HTTPException(status_code=500, detail=error_msg)
+    except json.JSONDecodeError as e:
+        error_msg = f"Failed to parse API response: {str(e)}"
         logger.error(error_msg)
         raise HTTPException(status_code=500, detail=error_msg)
     except Exception as e:

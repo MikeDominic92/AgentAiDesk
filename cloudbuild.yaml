@@ -3,11 +3,11 @@ steps:
 - name: 'gcr.io/cloud-builders/docker'
   args: ['build', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/help-desk-repo/help-desk-agent', '.']
 
-# Push the container image
+# Push the container image to Artifact Registry
 - name: 'gcr.io/cloud-builders/docker'
   args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/help-desk-repo/help-desk-agent']
 
-# Deploy to Cloud Run
+# Deploy container image to Cloud Run
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
   entrypoint: gcloud
   args:
@@ -20,15 +20,9 @@ steps:
   - 'us-central1'
   - '--platform'
   - 'managed'
-  - '--service-account'
-  - 'agentaidesk-app@agentaidesk-2025.iam.gserviceaccount.com'
   - '--allow-unauthenticated'
   - '--set-env-vars'
-  - 'GCP_PROJECT_ID=$PROJECT_ID,STORAGE_BUCKET=agentaidesk-storage-2025,DEEPSEEK_API_KEY=sk-7c38538a7465446ba6a0bfe9da9d3565'
-  - '--port'
-  - '8080'
-  - '--memory'
-  - '1Gi'
+  - 'GCP_PROJECT_ID=$PROJECT_ID,STORAGE_BUCKET=agentaidesk-storage-2025'
 
 images:
 - 'us-central1-docker.pkg.dev/$PROJECT_ID/help-desk-repo/help-desk-agent'

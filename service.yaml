@@ -19,24 +19,10 @@ spec:
         - name: STORAGE_BUCKET
           value: "agentaidesk-storage-2025"
         - name: DEEPSEEK_API_KEY
-          valueFrom:
-            secretKeyRef:
-              name: deepseek-api-key
-              key: latest
+          value: "sk-7c38538a7465446ba6a0bfe9da9d3565"
         - name: API_KEY
-          valueFrom:
-            secretKeyRef:
-              name: api-key
-              key: latest
+          value: "sk-7c38538a7465446ba6a0bfe9da9d3565"
         resources:
           limits:
             memory: 1Gi
             cpu: "1"
-        volumeMounts:
-        - name: service-account
-          mountPath: /secrets
-          readOnly: true
-      volumes:
-      - name: service-account
-        secret:
-          secretName: service-account-key
